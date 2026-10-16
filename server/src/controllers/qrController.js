@@ -2,13 +2,35 @@ const QRCode = require('qrcode');
 
 exports.getQRCode = async (req, res, next) => {
   try {
-    const websiteUrl = process.env.PUBLIC_WEBSITE_URL || 'http://localhost:5173';
+    let websiteUrl = process.env.PUBLIC_WEBSITE_URL;
+
+    // Detect live frontend origin if env is not set or set to localhost
+    if (!websiteUrl || websiteUrl.includes('localhost')) {
+      const origin = req.headers.origin || req.headers.referer;
+      if (origin && !origin.includes('localhost')) {
+        try {
+          const parsed = new URL(origin);
+          websiteUrl = `${parsed.protocol}//${parsed.host}`;
+        } catch (e) {
+          websiteUrl = origin;
+        }
+      }
+    }
+
+    if (!websiteUrl || websiteUrl.includes('localhost')) {
+      if (process.env.NODE_ENV === 'production') {
+        websiteUrl = 'https://safe-tag-app.vercel.app';
+      } else {
+        websiteUrl = 'http://localhost:5173';
+      }
+    }
+
     const { format = 'png' } = req.query;
 
     if (format === 'svg') {
       const svg = await QRCode.toString(websiteUrl, { type: 'svg', width: 300 });
       res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.send(svg);
     }
 
@@ -22,7 +44,7 @@ exports.getQRCode = async (req, res, next) => {
       },
     });
 
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.status(200).json({
       status: 'success',
       data: {
