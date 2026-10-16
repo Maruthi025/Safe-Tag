@@ -22,18 +22,27 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password })
+    if (res.data.data?.token) {
+      localStorage.setItem('safetag_token', res.data.data.token)
+    }
     setUser(res.data.data.user)
     return res.data.data.user
   }
 
   const register = async (data) => {
     const res = await api.post('/auth/register', data)
+    if (res.data.data?.token) {
+      localStorage.setItem('safetag_token', res.data.data.token)
+    }
     setUser(res.data.data.user)
     return res.data.data.user
   }
 
   const logout = async () => {
-    await api.post('/auth/logout')
+    try {
+      await api.post('/auth/logout')
+    } catch {}
+    localStorage.removeItem('safetag_token')
     setUser(null)
   }
 

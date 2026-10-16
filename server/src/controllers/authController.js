@@ -13,7 +13,7 @@ const sendTokenCookie = (res, token) => {
   res.cookie('jwt', token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'Strict' : 'Lax',
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
@@ -41,7 +41,7 @@ exports.register = async (req, res, next) => {
 
     res.status(201).json({
       status: 'success',
-      data: { user: user.toSafeJSON() },
+      data: { user: user.toSafeJSON(), token },
     });
   } catch (error) {
     next(error);
@@ -67,7 +67,7 @@ exports.login = async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      data: { user: user.toSafeJSON() },
+      data: { user: user.toSafeJSON(), token },
     });
   } catch (error) {
     next(error);
