@@ -1,0 +1,63 @@
+module.exports = {
+  ITEM_CATEGORIES: [
+    'Mobile Phone',
+    'Laptop',
+    'Bag',
+    'Wallet',
+    'Keys',
+    'Water Bottle',
+    'Documents',
+    'Watch',
+    'Accessories',
+    'Other',
+  ],
+  ITEM_STATUS: {
+    REGISTERED: 'registered',
+    LOST: 'lost',
+    FOUND_REPORT_RECEIVED: 'found_report_received',
+    RECOVERY_IN_PROGRESS: 'recovery_in_progress',
+    RECOVERED: 'recovered',
+    ARCHIVED: 'archived',
+  },
+  LOST_REPORT_STATUS: {
+    ACTIVE: 'active',
+    MATCHED: 'matched',
+    RECOVERED: 'recovered',
+    CLOSED: 'closed',
+  },
+  FOUND_REPORT_STATUS: {
+    PENDING: 'pending',
+    MATCHED: 'matched',
+    OWNER_REVIEWING: 'owner_reviewing',
+    RECOVERED: 'recovered',
+    CLOSED: 'closed',
+  },
+  MATCH_CATEGORY: {
+    STRONG_POSSIBLE: 'strong_possible',
+    POSSIBLE: 'possible',
+    NO_MATCH: 'no_match',
+  },
+  MATCH_REVIEW_STATUS: {
+    PENDING: 'pending',
+    CONFIRMED: 'confirmed',
+    REJECTED: 'rejected',
+  },
+  NOTIFICATION_TYPES: {
+    MATCH_FOUND: 'match_found',
+    RECOVERY_CONFIRMED: 'recovery_confirmed',
+    ITEM_RECOVERED: 'item_recovered',
+    MATCH_REJECTED: 'match_rejected',
+  },
+  MATCH_WEIGHTS: {
+    CATEGORY: 30,
+    DESCRIPTION: 25,
+    BRAND: 15,
+    IDENTIFYING_FEATURES: 15,
+    COLOR: 10,
+    DATE_PROXIMITY: 5,
+  },
+  MATCH_THRESHOLDS: {
+    STRONG: 70,
+    POSSIBLE: 40,
+  },
+};
