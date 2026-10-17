@@ -57,7 +57,10 @@ export default function SubmitSuccessPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <Link to={`/finder/report/${reference}`} className="btn-primary w-full py-2.5 justify-center">
+          <Link
+            to={`/finder/report/${reference}${state?.accessToken ? `?token=${state.accessToken}` : ''}`}
+            className="btn-primary w-full py-2.5 justify-center"
+          >
             <Eye className="h-4 w-4" /> View Report Details & Call Options
           </Link>
           <Link to="/finder/reports" className="btn-secondary w-full py-2.5 justify-center">

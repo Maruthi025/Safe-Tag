@@ -1,42 +1,68 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, PhoneCall, ShieldCheck, Clock, MapPin, AlertCircle, Info, CheckCircle2 } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { ArrowLeft, PhoneCall, ShieldCheck, Clock, MapPin, AlertCircle, Info, CheckCircle2, RefreshCw } from 'lucide-react'
 import api from '../../services/api'
-import { getFinderTokenForReport } from '../../services/finderStorage'
+import { getFinderTokenForReport, saveFinderReportToken } from '../../services/finderStorage'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ErrorMessage from '../../components/shared/ErrorMessage'
 
 export default function FinderReportDetailPage() {
   const { ref } = useParams()
+  const [searchParams] = useSearchParams()
+  const tokenFromUrl = searchParams.get('token')
+  const [token, setToken] = useState(() => getFinderTokenForReport(ref) || tokenFromUrl || '')
   const [reportData, setReportData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [callingData, setCallingData] = useState(null)
   const [loadingCall, setLoadingCall] = useState(false)
   const [callError, setCallError] = useState('')
 
-  const token = getFinderTokenForReport(ref)
-
+  // Persist token from URL to localStorage if present
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const config = token ? { headers: { 'x-finder-token': token } } : {}
-        const res = await api.get(`/found-reports/view/${ref}`, config)
-        setReportData(res.data.data)
-      } catch (err) {
+    if (tokenFromUrl && tokenFromUrl !== getFinderTokenForReport(ref)) {
+      saveFinderReportToken({ ref, token: tokenFromUrl })
+      setToken(tokenFromUrl)
+    }
+  }, [ref, tokenFromUrl])
+
+  const fetchReport = useCallback(async (isBackground = false) => {
+    if (!isBackground) setRefreshing(true)
+    try {
+      const activeToken = token || getFinderTokenForReport(ref) || searchParams.get('token')
+      const config = activeToken ? { headers: { 'x-finder-token': activeToken } } : {}
+      const res = await api.get(`/found-reports/view/${ref}`, config)
+      setReportData(res.data.data)
+      setError('')
+    } catch (err) {
+      if (!isBackground) {
         console.error('Failed to load report:', err)
         setError(err.response?.data?.message || 'Report not found or private.')
-      } finally {
+      }
+    } finally {
+      if (!isBackground) {
         setLoading(false)
+        setRefreshing(false)
       }
     }
+  }, [ref, token, searchParams])
 
+  useEffect(() => {
     fetchReport()
-  }, [ref, token])
+
+    // Auto-poll every 3 seconds while calling is not yet enabled
+    const interval = setInterval(() => {
+      fetchReport(true)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [fetchReport])
 
   const handleRequestCall = async () => {
-    if (!token) {
+    const activeToken = token || getFinderTokenForReport(ref) || searchParams.get('token')
+    if (!activeToken) {
       setCallError('Authorization token not found on this device.')
       return
     }
@@ -45,7 +71,7 @@ export default function FinderReportDetailPage() {
     setCallError('')
     try {
       const res = await api.get(`/found-reports/call-owner/${ref}`, {
-        headers: { 'x-finder-token': token }
+        headers: { 'x-finder-token': activeToken }
       })
       setCallingData(res.data.data)
       // Automatically trigger the device dialer on compatible browsers
@@ -85,9 +111,19 @@ export default function FinderReportDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-xl mx-auto">
-        <Link to="/finder/reports" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-700 mb-4">
-          <ArrowLeft className="h-4 w-4" /> Back to My Found Reports
-        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <Link to="/finder/reports" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-700">
+            <ArrowLeft className="h-4 w-4" /> Back to My Found Reports
+          </Link>
+          <button
+            onClick={() => fetchReport(false)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 text-xs text-brand-700 hover:text-brand-900 bg-white border border-gray-200 px-2.5 py-1 rounded-md shadow-xs"
+          >
+            <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Checking...' : 'Refresh Status'}</span>
+          </button>
+        </div>
 
         {/* Header */}
         <div className="card mb-4">
