@@ -22,7 +22,7 @@ exports.getMatches = async (req, res, next) => {
       .populate('foundReportId', 'reportReference category description color brand manualFoundLocation foundAt finderName status createdAt')
       .populate('lostReportId', 'lostAt lastKnownLocation description status')
       .populate('itemId', 'name category status imageUrl')
-      .sort({ matchScore: -1, createdAt: -1 });
+      .sort({ createdAt: -1, matchScore: -1 });
 
     res.status(200).json({ status: 'success', results: matches.length, data: { matches } });
   } catch (error) {

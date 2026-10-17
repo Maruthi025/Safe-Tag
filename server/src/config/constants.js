@@ -67,6 +67,6 @@ module.exports = {
   },
   MATCH_THRESHOLDS: {
     STRONG: 70,
-    POSSIBLE: 25,
+    POSSIBLE: 35,
   },
 };

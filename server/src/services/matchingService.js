@@ -80,18 +80,47 @@ const computeMatchScore = (foundReport, lostReport, item) => {
     });
   }
 
-  // Brand match (15 pts)
+  // Brand match (15 pts) or brand conflict rejection
   if (
     foundReport.brand &&
     item.brand &&
-    foundReport.brand.toLowerCase().trim() === item.brand.toLowerCase().trim()
+    foundReport.brand.trim() &&
+    item.brand.trim()
   ) {
-    score += MATCH_WEIGHTS.BRAND;
-    reasons.push({
-      field: 'brand',
-      weight: MATCH_WEIGHTS.BRAND,
-      detail: `Brand matches: ${item.brand}`,
-    });
+    const b1 = foundReport.brand.toLowerCase().trim();
+    const b2 = item.brand.toLowerCase().trim();
+    if (b1 === b2 || b1.includes(b2) || b2.includes(b1)) {
+      score += MATCH_WEIGHTS.BRAND;
+      reasons.push({
+        field: 'brand',
+        weight: MATCH_WEIGHTS.BRAND,
+        detail: `Brand matches: ${item.brand}`,
+      });
+    } else {
+      // Direct brand conflict (e.g., Apple vs Samsung/Android)
+      // Conflicting brands should never be matched
+      return {
+        score: 0,
+        reasons: [{ field: 'brand_conflict', weight: 0, detail: `Different brand: ${foundReport.brand} vs ${item.brand}` }],
+        category: MATCH_CATEGORY.NO_MATCH,
+      };
+    }
+  }
+
+  // Cross-ecosystem conflict check in text (e.g. iPhone/Apple vs Samsung/Android)
+  const fullFoundText = `${foundReport.brand || ''} ${foundReport.description || ''}`.toLowerCase();
+  const fullItemText = `${item.brand || ''} ${item.name || ''} ${item.description || ''}`.toLowerCase();
+  const isFoundApple = fullFoundText.includes('iphone') || fullFoundText.includes('apple') || fullFoundText.includes('ios');
+  const isFoundAndroid = fullFoundText.includes('samsung') || fullFoundText.includes('android') || fullFoundText.includes('galaxy') || fullFoundText.includes('pixel') || fullFoundText.includes('oneplus');
+  const isItemApple = fullItemText.includes('iphone') || fullItemText.includes('apple') || fullItemText.includes('ios');
+  const isItemAndroid = fullItemText.includes('samsung') || fullItemText.includes('android') || fullItemText.includes('galaxy') || fullItemText.includes('pixel') || fullItemText.includes('oneplus');
+
+  if ((isFoundApple && isItemAndroid) || (isFoundAndroid && isItemApple)) {
+    return {
+      score: 0,
+      reasons: [{ field: 'ecosystem_conflict', weight: 0, detail: 'Cross-brand ecosystem conflict (Apple vs Android)' }],
+      category: MATCH_CATEGORY.NO_MATCH,
+    };
   }
 
   // Identifying features (15 pts)
@@ -163,8 +192,9 @@ const computeMatchScore = (foundReport, lostReport, item) => {
  */
 const runMatchingForFoundReport = async (foundReport) => {
   try {
+    // Include lost reports that are active OR already matched to other candidate reports
     const activeLostReports = await LostReport.find({
-      status: LOST_REPORT_STATUS.ACTIVE,
+      status: { $in: [LOST_REPORT_STATUS.ACTIVE, LOST_REPORT_STATUS.MATCHED] },
     }).populate('itemId');
 
     // Also include any items marked 'lost' by the owner that don't have an active LostReport yet
