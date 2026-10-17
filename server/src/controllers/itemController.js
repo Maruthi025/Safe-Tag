@@ -2,6 +2,7 @@ const Item = require('../models/Item');
 const LostReport = require('../models/LostReport');
 const AppError = require('../utils/AppError');
 const { ITEM_STATUS } = require('../config/constants');
+const { runMatchingForLostReport } = require('../services/matchingService');
 
 exports.createItem = async (req, res, next) => {
   try {
@@ -79,6 +80,17 @@ exports.updateItemStatus = async (req, res, next) => {
     }
     item.status = status;
     await item.save();
+
+    // When marking as lost, auto-create a LostReport and trigger matching
+    if (status === ITEM_STATUS.LOST) {
+      const lostReport = await LostReport.create({
+        itemId: item._id,
+        ownerId: req.user._id,
+        lostAt: new Date(),
+      });
+      runMatchingForLostReport(lostReport, item).catch(console.error);
+    }
+
     res.status(200).json({ status: 'success', data: { item } });
   } catch (error) {
     next(error);

@@ -10,6 +10,7 @@ const {
   MATCH_REVIEW_STATUS,
   NOTIFICATION_TYPES,
   LOST_REPORT_STATUS,
+  FOUND_REPORT_STATUS,
   ITEM_STATUS,
 } = require('../config/constants');
 
@@ -18,16 +19,20 @@ const {
  */
 const keywordOverlap = (str1 = '', str2 = '') => {
   if (!str1 || !str2) return 0;
-  const words1 = new Set(
-    str1.toLowerCase().split(/\W+/).filter((w) => w.length > 2)
-  );
-  const words2 = new Set(
-    str2.toLowerCase().split(/\W+/).filter((w) => w.length > 2)
-  );
-  if (words1.size === 0 || words2.size === 0) return 0;
+  const words1 = Array.from(new Set(
+    str1.toLowerCase().split(/\W+/).filter((w) => w.length > 1)
+  ));
+  const words2 = Array.from(new Set(
+    str2.toLowerCase().split(/\W+/).filter((w) => w.length > 1)
+  ));
+  if (words1.length === 0 || words2.length === 0) return 0;
   let overlap = 0;
-  words1.forEach((w) => { if (words2.has(w)) overlap++; });
-  return overlap / Math.min(words1.size, words2.size);
+  words1.forEach((w) => {
+    if (words2.some((w2) => w2 === w || (w.length >= 3 && w2.includes(w)) || (w2.length >= 3 && w.includes(w2)))) {
+      overlap++;
+    }
+  });
+  return overlap / Math.min(words1.length, words2.length);
 };
 
 /**
@@ -162,6 +167,28 @@ const runMatchingForFoundReport = async (foundReport) => {
       status: LOST_REPORT_STATUS.ACTIVE,
     }).populate('itemId');
 
+    // Also include any items marked 'lost' by the owner that don't have an active LostReport yet
+    const existingLostItemIds = activeLostReports.map(lr => (lr.itemId?._id || lr.itemId)?.toString()).filter(Boolean);
+    const lostItemsWithoutReport = await Item.find({
+      status: ITEM_STATUS.LOST,
+      _id: { $nin: existingLostItemIds },
+    });
+
+    for (const lostItem of lostItemsWithoutReport) {
+      let lr = await LostReport.findOne({ itemId: lostItem._id, status: LOST_REPORT_STATUS.ACTIVE });
+      if (!lr) {
+        lr = await LostReport.create({
+          itemId: lostItem._id,
+          ownerId: lostItem.ownerId,
+          lostAt: new Date(),
+          description: lostItem.description,
+          status: LOST_REPORT_STATUS.ACTIVE,
+        });
+      }
+      const populated = await LostReport.findById(lr._id).populate('itemId');
+      activeLostReports.push(populated);
+    }
+
     const matchPromises = activeLostReports.map(async (lostReport) => {
       const item = lostReport.itemId;
       if (!item) return;
@@ -217,7 +244,7 @@ const runMatchingForFoundReport = async (foundReport) => {
 const runMatchingForLostReport = async (lostReport, item) => {
   try {
     const pendingFoundReports = await FoundReport.find({
-      status: { $in: ['pending', FOUND_REPORT_STATUS.WAITING_FOR_OWNER_REVIEW, 'waiting_for_owner_review'] },
+      status: { $nin: ['recovered', 'closed'] },
     });
 
     const matchPromises = pendingFoundReports.map(async (foundReport) => {
