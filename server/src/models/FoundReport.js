@@ -90,7 +90,22 @@ const foundReportSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: Object.values(FOUND_REPORT_STATUS),
-      default: FOUND_REPORT_STATUS.PENDING,
+      default: FOUND_REPORT_STATUS.WAITING_FOR_OWNER_REVIEW,
+    },
+    accessTokenHash: {
+      type: String,
+      index: true,
+      select: false, // Never return raw or hash in standard queries unless selected
+    },
+    finderConsent: {
+      phoneSharingConsent: {
+        type: Boolean,
+        default: true, // Finder consenting to share contact with verified owner
+      },
+      consentedAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
   },
   { timestamps: true }

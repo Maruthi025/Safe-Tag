@@ -20,6 +20,8 @@ import RegisterPage from './pages/auth/RegisterPage'
 // Finder pages
 import FinderPage from './pages/finder/FinderPage'
 import SubmitSuccessPage from './pages/finder/SubmitSuccessPage'
+import MyFoundReportsPage from './pages/finder/MyFoundReportsPage'
+import FinderReportDetailPage from './pages/finder/FinderReportDetailPage'
 
 // Admin pages
 import DashboardPage from './pages/admin/DashboardPage'
@@ -28,7 +30,7 @@ import ItemDetailPage from './pages/admin/ItemDetailPage'
 import RegisterItemPage from './pages/admin/RegisterItemPage'
 import LostReportsPage from './pages/admin/LostReportsPage'
 import ReportLostPage from './pages/admin/ReportLostPage'
-import MatchesPage from './pages/admin/MatchesPage'
+import FoundItemReportsPage from './pages/admin/FoundItemReportsPage'
 import MatchDetailPage from './pages/admin/MatchDetailPage'
 import NotificationsPage from './pages/admin/NotificationsPage'
 import ProfilePage from './pages/admin/ProfilePage'
@@ -53,9 +55,11 @@ export default function App() {
               <Route path="/register" element={<RegisterPage />} />
             </Route>
 
-            {/* Finder Routes (independent view for mobile QR scanners) */}
+            {/* Finder Routes (mobile friendly, accessible without account) */}
             <Route path="/finder" element={<FinderPage />} />
             <Route path="/finder/success" element={<SubmitSuccessPage />} />
+            <Route path="/finder/reports" element={<MyFoundReportsPage />} />
+            <Route path="/finder/report/:ref" element={<FinderReportDetailPage />} />
 
             {/* Protected Admin Routes */}
             <Route element={<ProtectedRoute />}>
@@ -66,7 +70,8 @@ export default function App() {
                 <Route path="/admin/items/:id" element={<ItemDetailPage />} />
                 <Route path="/admin/lost-reports" element={<LostReportsPage />} />
                 <Route path="/admin/lost-reports/new" element={<ReportLostPage />} />
-                <Route path="/admin/matches" element={<MatchesPage />} />
+                <Route path="/admin/found-reports" element={<FoundItemReportsPage />} />
+                <Route path="/admin/matches" element={<FoundItemReportsPage />} />
                 <Route path="/admin/matches/:id" element={<MatchDetailPage />} />
                 <Route path="/admin/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/profile" element={<ProfilePage />} />

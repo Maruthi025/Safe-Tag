@@ -27,6 +27,7 @@ module.exports = {
   },
   FOUND_REPORT_STATUS: {
     PENDING: 'pending',
+    WAITING_FOR_OWNER_REVIEW: 'waiting_for_owner_review',
     MATCHED: 'matched',
     OWNER_REVIEWING: 'owner_reviewing',
     RECOVERED: 'recovered',
@@ -42,11 +43,19 @@ module.exports = {
     CONFIRMED: 'confirmed',
     REJECTED: 'rejected',
   },
+  CONTACT_SHARING_STATUS: {
+    NOT_REQUESTED: 'not_requested',
+    CONSENT_GRANTED: 'consent_granted',
+    CONSENT_DECLINED: 'consent_declined',
+    CONSENT_REVOKED: 'consent_revoked',
+  },
   NOTIFICATION_TYPES: {
     MATCH_FOUND: 'match_found',
     RECOVERY_CONFIRMED: 'recovery_confirmed',
     ITEM_RECOVERED: 'item_recovered',
     MATCH_REJECTED: 'match_rejected',
+    CONTACT_SHARED: 'contact_shared',
+    CONTACT_REVOKED: 'contact_revoked',
   },
   MATCH_WEIGHTS: {
     CATEGORY: 30,

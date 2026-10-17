@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Award } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Award, PhoneCall, ShieldCheck, AlertTriangle } from 'lucide-react'
 import api from '../../services/api'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import ErrorMessage from '../../components/shared/ErrorMessage'
@@ -14,49 +14,84 @@ export default function MatchDetailPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [updatingConsent, setUpdatingConsent] = useState(false)
 
   useEffect(() => {
-    api.get(`/matches/${id}`).then(r => setMatch(r.data.data.match)).catch(() => setError('Match not found.')).finally(() => setLoading(false))
+    api.get(`/matches/${id}`)
+      .then(r => setMatch(r.data.data.match))
+      .catch(() => setError('Match not found.'))
+      .finally(() => setLoading(false))
   }, [id])
 
+  // Decision A: Review Match (Confirm or Reject)
   const review = async (action) => {
-    setSubmitting(true); setError('')
+    setSubmitting(true); setError(''); setSuccess('')
     try {
       await api.patch(`/matches/${id}/review`, { action })
-      if (action === 'confirm') setSuccess('Match confirmed! Recovery is now in progress.')
-      else setSuccess('Match rejected.')
+      if (action === 'confirm') {
+        setSuccess('Match confirmed! Recovery is now in progress. You may now optionally authorize phone sharing below.')
+      } else {
+        setSuccess('Match rejected.')
+      }
       const r = await api.get(`/matches/${id}`)
       setMatch(r.data.data.match)
-    } catch (err) { setError(err.response?.data?.message || 'Failed to review match.') }
-    finally { setSubmitting(false) }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to review match.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Decision B: Separate Phone Sharing Consent (Grant or Revoke)
+  const handleToggleConsent = async (newConsentValue) => {
+    setUpdatingConsent(true); setError(''); setSuccess('')
+    try {
+      await api.patch(`/matches/${id}/phone-consent`, { consent: newConsentValue })
+      if (newConsentValue) {
+        setSuccess('Phone number sharing authorized! The finder can now call you directly.')
+      } else {
+        setSuccess('Phone number sharing revoked. Future calling access for the finder has been disabled.')
+      }
+      const r = await api.get(`/matches/${id}`)
+      setMatch(r.data.data.match)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update phone sharing consent.')
+    } finally {
+      setUpdatingConsent(false)
+    }
   }
 
   const markRecovered = async () => {
-    setSubmitting(true); setError('')
+    setSubmitting(true); setError(''); setSuccess('')
     try {
       await api.patch(`/matches/${id}/recover`)
       setSuccess('Item marked as recovered! Congratulations!')
       const r = await api.get(`/matches/${id}`)
       setMatch(r.data.data.match)
-    } catch (err) { setError(err.response?.data?.message || 'Failed to mark recovered.') }
-    finally { setSubmitting(false) }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to mark recovered.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  if (loading) return <div className="py-20"><LoadingSpinner size="lg" /></div>
-  if (error && !match) return <ErrorMessage message={error} />
+  if (loading) return <div className="py-20 flex justify-center"><LoadingSpinner size="lg" /></div>
+  if (error && !match) return <div className="p-4"><ErrorMessage message={error} /></div>
 
   const found = match.foundReportId
   const item = match.itemId
+  const isMatchApproved = match.reviewStatus === 'confirmed'
+  const isPhoneConsentGranted = match.phoneSharingConsent === true
 
   return (
     <div className="max-w-3xl">
-      <Link to="/admin/matches" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand-700 mb-4">
-        <ArrowLeft className="h-4 w-4" /> Back to Matches
+      <Link to="/admin/found-reports" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand-700 mb-4">
+        <ArrowLeft className="h-4 w-4" /> Back to Found Item Reports
       </Link>
 
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Match Review</h1>
+          <h1 className="text-xl font-bold text-gray-900">Found Report Review & Match</h1>
           <p className="text-xs text-gray-500">Evaluate the finder report to confirm or reject ownership</p>
         </div>
         <div className="text-right">
@@ -78,9 +113,14 @@ export default function MatchDetailPage() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
           <StatusBadge status={match.matchCategory} />
           <StatusBadge status={match.reviewStatus} />
+          {isPhoneConsentGranted && (
+            <span className="badge-green inline-flex items-center gap-1">
+              <PhoneCall className="h-3 w-3" /> Calling Authorized
+            </span>
+          )}
         </div>
       </div>
 
@@ -111,8 +151,85 @@ export default function MatchDetailPage() {
         </div>
       </div>
 
-      {/* Contact & Location if confirmed */}
-      {match.reviewStatus === 'confirmed' && (
+      {/* DECISION A: Match Review actions */}
+      {match.reviewStatus === 'pending' && (
+        <div className="card mb-4 border-brand-200">
+          <h3 className="font-semibold text-gray-900 text-sm mb-1">Decision A — Match Verification</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Confirm whether this found item belongs to you. Approving the match alone will <strong>not</strong> share your phone number.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={() => review('confirm')} disabled={submitting} className="btn-success text-sm flex-1">
+              <CheckCircle className="h-4 w-4" /> Confirm Match (This is Mine)
+            </button>
+            <button onClick={() => review('reject')} disabled={submitting} className="btn-danger text-sm flex-1">
+              <XCircle className="h-4 w-4" /> Reject (Not Mine)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DECISION B: Phone Number Sharing Consent (Only after Match Confirmed) */}
+      {isMatchApproved && item?.status !== 'recovered' && (
+        <div className="card mb-4 border-2 border-brand-300 bg-white shadow-sm">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="p-2 bg-brand-50 text-brand-700 rounded-lg">
+              <PhoneCall className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-sm">
+                Decision B — Direct Calling & Phone Number Sharing
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Separate owner consent required for the finder to view your phone number and trigger the Call Owner button.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPhoneConsentGranted}
+                disabled={updatingConsent}
+                onChange={(e) => handleToggleConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+              />
+              <div className="text-xs text-gray-800 leading-relaxed font-medium">
+                Allow this finder to see my phone number and call me about this report.
+              </div>
+            </label>
+          </div>
+
+          {isPhoneConsentGranted ? (
+            <div className="space-y-2">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800 flex items-center justify-between">
+                <div>
+                  <strong>Consent Granted:</strong> Calling is currently active for this finder.
+                </div>
+                <button
+                  onClick={() => handleToggleConsent(false)}
+                  disabled={updatingConsent}
+                  className="btn-danger text-xs py-1 px-2.5 whitespace-nowrap"
+                >
+                  Revoke Consent
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                <AlertTriangle className="h-3 w-3 inline mr-1 text-amber-500" />
+                Note: Revoking permission prevents any future lookups through Safe Tag, but cannot recall a number already viewed or dialed by the finder.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+              <strong>Consent Not Granted:</strong> Calling is hidden and disabled on the finder's screen.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Finder Contact details for owner coordination */}
+      {isMatchApproved && (
         <div className="card mb-4 bg-emerald-50 border-emerald-200">
           <h2 className="font-semibold text-emerald-900 text-sm mb-2">Finder Contact Information</h2>
           <p className="text-xs text-emerald-700 mb-3">Use these details to coordinate recovery:</p>
@@ -129,21 +246,13 @@ export default function MatchDetailPage() {
         </div>
       )}
 
-      {/* Review actions */}
-      {match.reviewStatus === 'pending' && (
-        <div className="flex gap-3">
-          <button onClick={() => review('confirm')} disabled={submitting} className="btn-success text-sm flex-1">
-            <CheckCircle className="h-4 w-4" /> Confirm Match (This is Mine)
-          </button>
-          <button onClick={() => review('reject')} disabled={submitting} className="btn-danger text-sm flex-1">
-            <XCircle className="h-4 w-4" /> Reject (Not Mine)
+      {/* Item recovery completion */}
+      {isMatchApproved && item?.status !== 'recovered' && (
+        <div className="mt-4">
+          <button onClick={markRecovered} disabled={submitting} className="btn-success text-sm w-full py-3">
+            <Award className="h-4 w-4" /> Mark Item as Fully Recovered
           </button>
         </div>
-      )}
-      {match.reviewStatus === 'confirmed' && item?.status !== 'recovered' && (
-        <button onClick={markRecovered} disabled={submitting} className="btn-success text-sm w-full">
-          <Award className="h-4 w-4" /> Mark Item as Fully Recovered
-        </button>
       )}
     </div>
   )

@@ -14,7 +14,7 @@ router.get('/', matchController.getMatches);
 // GET /api/matches/:id
 router.get('/:id', matchController.getMatch);
 
-// POST & PATCH /api/matches/:id/review
+// POST & PATCH /api/matches/:id/review (Decision A: Match Approval)
 router
   .route('/:id/review')
   .post(
@@ -34,6 +34,28 @@ router
     ],
     validate,
     matchController.reviewMatch
+  );
+
+// POST & PATCH /api/matches/:id/phone-consent (Decision B: Separate Phone Sharing Consent)
+router
+  .route('/:id/phone-consent')
+  .post(
+    [
+      body('consent')
+        .isBoolean()
+        .withMessage('Consent must be a boolean value'),
+    ],
+    validate,
+    matchController.updatePhoneSharingConsent
+  )
+  .patch(
+    [
+      body('consent')
+        .isBoolean()
+        .withMessage('Consent must be a boolean value'),
+    ],
+    validate,
+    matchController.updatePhoneSharingConsent
   );
 
 // POST & PATCH /api/matches/:id/recover

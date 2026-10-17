@@ -9,9 +9,9 @@ import { useNotifications } from '../../store/NotificationContext'
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/admin/found-reports', icon: Search, label: 'Found Item Reports' },
   { to: '/admin/items', icon: Package, label: 'My Belongings' },
   { to: '/admin/lost-reports', icon: FileWarning, label: 'Lost Reports' },
-  { to: '/admin/matches', icon: Search, label: 'Possible Matches' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { to: '/admin/qr', icon: QrCode, label: 'QR Code' },
   { to: '/admin/profile', icon: User, label: 'Profile' },

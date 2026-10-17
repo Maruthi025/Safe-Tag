@@ -47,6 +47,23 @@ const matchSchema = new mongoose.Schema(
       enum: Object.values(MATCH_REVIEW_STATUS),
       default: MATCH_REVIEW_STATUS.PENDING,
     },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    // Decision B: Distinct phone-number-sharing consent
+    phoneSharingConsent: {
+      type: Boolean,
+      default: false, // Explicitly false by default!
+    },
+    phoneSharingConsentAt: {
+      type: Date,
+      default: null,
+    },
+    phoneSharingRevokedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -29,4 +29,15 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authLimiter, foundReportLimiter, generalLimiter };
+const contactAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // max 30 attempts per 15 minutes
+  message: {
+    status: 'fail',
+    message: 'Too many contact requests from this IP. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { authLimiter, foundReportLimiter, generalLimiter, contactAccessLimiter };

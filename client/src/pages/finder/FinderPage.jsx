@@ -127,6 +127,8 @@ function LocationSharing({ onLocationCaptured, onLocationCleared }) {
   )
 }
 
+import { saveFinderReportToken } from '../../services/finderStorage'
+
 export default function FinderPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
@@ -136,6 +138,7 @@ export default function FinderPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [sharePhoneConsent, setSharePhoneConsent] = useState(true)
 
   const form1 = useForm({ resolver: zodResolver(step1Schema), defaultValues: { category: '' } })
   const form2 = useForm({ resolver: zodResolver(step2Schema) })
@@ -152,11 +155,36 @@ export default function FinderPage() {
         ...step2Data,
         finderPhone: step2Data.finderPhone || undefined,
         finderEmail: step2Data.finderEmail || undefined,
+        phoneSharingConsent: sharePhoneConsent,
         deviceLocationShared: !!deviceLocation,
         ...(deviceLocation ? { deviceLat: deviceLocation.lat, deviceLng: deviceLocation.lng, deviceAccuracy: deviceLocation.accuracy } : {}),
       }
       const res = await api.post('/found-reports', payload)
-      navigate('/finder/success', { state: { reference: res.data.data.reportReference } })
+      const reportRef = res.data.data.reportReference
+      const accessToken = res.data.data.accessToken
+
+      // Save to secure local browser storage for "My Found Reports"
+      saveFinderReportToken({
+        ref: reportRef,
+        token: accessToken,
+        category: step1Data.category,
+        description: step1Data.description,
+      })
+
+      navigate('/finder/success', {
+        state: {
+          reference: reportRef,
+          accessToken: accessToken,
+          item: {
+            category: step1Data.category,
+            description: step1Data.description,
+            brand: step1Data.brand,
+            color: step1Data.color,
+            status: 'waiting_for_owner_review',
+            createdAt: new Date().toISOString(),
+          }
+        }
+      })
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed. Please try again.')
     } finally { setSubmitting(false) }
@@ -322,12 +350,24 @@ export default function FinderPage() {
               <label className="flex items-start gap-2.5 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
+                  checked={sharePhoneConsent}
+                  onChange={e => setSharePhoneConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-brand-600 rounded border-gray-300"
+                />
+                <span className="text-xs text-gray-700 leading-snug">
+                  <strong>Consent to share contact details:</strong> Allow the verified owner to see my contact details if they confirm ownership of this item.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
                   checked={confirmed}
                   onChange={e => setConfirmed(e.target.checked)}
                   className="mt-0.5 h-4 w-4 text-brand-600 rounded border-gray-300"
                 />
                 <span className="text-xs text-gray-700 leading-snug">
-                  I confirm that the information provided is accurate to the best of my knowledge and agree to be contacted about this found item.
+                  I confirm that the information provided is accurate to the best of my knowledge.
                 </span>
               </label>
 

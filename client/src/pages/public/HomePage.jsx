@@ -117,9 +117,14 @@ export default function HomePage() {
                   ))}
                 </ul>
               </div>
-              <Link to="/finder" className="inline-flex items-center justify-center w-full px-4 py-3 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors">
-                Report Found Item
-              </Link>
+              <div className="flex flex-col gap-2">
+                <Link to="/finder" className="inline-flex items-center justify-center w-full px-4 py-3 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors">
+                  Report Found Item
+                </Link>
+                <Link to="/finder/reports" className="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                  View My Found Reports History
+                </Link>
+              </div>
             </div>
           </div>
         </div>

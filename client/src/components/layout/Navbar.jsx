@@ -32,6 +32,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/" end className={navLinkClass}>Home</NavLink>
             <NavLink to="/how-it-works" className={navLinkClass}>How It Works</NavLink>
+            <NavLink to="/finder/reports" className={navLinkClass}>My Found Reports</NavLink>
             <NavLink to="/about" className={navLinkClass}>About</NavLink>
             {user ? (
               <>
@@ -68,6 +69,7 @@ export default function Navbar() {
           <div className="md:hidden pb-4 flex flex-col gap-3 pt-2">
             <NavLink to="/" end className={navLinkClass} onClick={() => setMenuOpen(false)}>Home</NavLink>
             <NavLink to="/how-it-works" className={navLinkClass} onClick={() => setMenuOpen(false)}>How It Works</NavLink>
+            <NavLink to="/finder/reports" className={navLinkClass} onClick={() => setMenuOpen(false)}>My Found Reports</NavLink>
             <NavLink to="/about" className={navLinkClass} onClick={() => setMenuOpen(false)}>About</NavLink>
             {user ? (
               <>

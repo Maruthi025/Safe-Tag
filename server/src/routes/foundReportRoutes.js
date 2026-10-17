@@ -5,7 +5,7 @@ const foundReportController = require('../controllers/foundReportController');
 const authenticate = require('../middleware/authenticate');
 const validate = require('../middleware/validate');
 const upload = require('../middleware/upload');
-const { foundReportLimiter } = require('../middleware/rateLimiter');
+const { foundReportLimiter, contactAccessLimiter } = require('../middleware/rateLimiter');
 const { ITEM_CATEGORIES } = require('../config/constants');
 
 // POST /api/found-reports — public, rate-limited
@@ -28,7 +28,16 @@ router.post(
   foundReportController.createFoundReport
 );
 
-// GET /api/found-reports/status/:ref — public, finder can look up their report
+// POST /api/found-reports/my-reports — public with token verification in request body
+router.post('/my-reports', foundReportController.getMyReportsBatch);
+
+// GET /api/found-reports/view/:ref — public with x-finder-token or ?token
+router.get('/view/:ref', foundReportController.getFoundReportByToken);
+
+// GET /api/found-reports/:ref/call-owner — protected contact retrieval for direct calling
+router.get('/call-owner/:ref', contactAccessLimiter, foundReportController.getOwnerContactForCall);
+
+// GET /api/found-reports/status/:ref — public, finder can look up basic report status
 router.get('/status/:ref', foundReportController.getFoundReportStatus);
 
 // Protected routes (authenticated users / admin)

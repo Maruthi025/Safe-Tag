@@ -216,7 +216,9 @@ const runMatchingForFoundReport = async (foundReport) => {
  */
 const runMatchingForLostReport = async (lostReport, item) => {
   try {
-    const pendingFoundReports = await FoundReport.find({ status: 'pending' });
+    const pendingFoundReports = await FoundReport.find({
+      status: { $in: ['pending', FOUND_REPORT_STATUS.WAITING_FOR_OWNER_REVIEW, 'waiting_for_owner_review'] },
+    });
 
     const matchPromises = pendingFoundReports.map(async (foundReport) => {
       const { score, reasons, category } = computeMatchScore(foundReport, lostReport, item);
