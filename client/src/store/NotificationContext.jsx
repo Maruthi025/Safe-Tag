@@ -1,26 +1,52 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import api from '../services/api'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 
 const NotificationContext = createContext(null)
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth()
+  const { showToast } = useToast()
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const prevUnreadRef = useRef(null)   // null = first load (no toast on mount)
+  const prevNotifIds = useRef(new Set())
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return
     try {
       const res = await api.get('/notifications')
-      setNotifications(res.data.data.notifications || [])
-      setUnreadCount(res.data.data.unreadCount || 0)
+      const fetched = res.data.data.notifications || []
+      const count   = res.data.data.unreadCount || 0
+
+      setNotifications(fetched)
+      setUnreadCount(count)
+
+      // On first load just record the baseline — don't pop toasts
+      if (prevUnreadRef.current === null) {
+        prevUnreadRef.current = count
+        prevNotifIds.current = new Set(fetched.map((n) => n._id))
+        return
+      }
+
+      // Find genuinely new notifications that weren't in our last snapshot
+      const newOnes = fetched.filter(
+        (n) => !n.readAt && !prevNotifIds.current.has(n._id)
+      )
+
+      newOnes.forEach((n) => {
+        showToast(n.title, n.message, 'info')
+      })
+
+      prevUnreadRef.current = count
+      prevNotifIds.current  = new Set(fetched.map((n) => n._id))
     } catch {}
-  }, [user])
+  }, [user, showToast])
 
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotifications, 10000) // 10 s
     return () => clearInterval(interval)
   }, [fetchNotifications])
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, PhoneCall, ShieldCheck, Clock, MapPin, AlertCircle, Info, CheckCircle2, RefreshCw } from 'lucide-react'
 import api from '../../services/api'
@@ -6,6 +6,7 @@ import { getFinderTokenForReport, saveFinderReportToken } from '../../services/f
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ErrorMessage from '../../components/shared/ErrorMessage'
+import { useToast } from '../../store/ToastContext'
 
 export default function FinderReportDetailPage() {
   const { ref } = useParams()
@@ -19,6 +20,11 @@ export default function FinderReportDetailPage() {
   const [callingData, setCallingData] = useState(null)
   const [loadingCall, setLoadingCall] = useState(false)
   const [callError, setCallError] = useState('')
+  const { showToast } = useToast()
+
+  // Track previous status values so we can detect transitions
+  const prevCanCall   = useRef(null)  // null = first load
+  const prevApproved  = useRef(null)
 
   // Persist token from URL to localStorage if present
   useEffect(() => {
@@ -27,6 +33,38 @@ export default function FinderReportDetailPage() {
       setToken(tokenFromUrl)
     }
   }, [ref, tokenFromUrl])
+
+  // Fire toasts when the owner's decisions change
+  useEffect(() => {
+    if (!reportData) return
+    const { canCallOwner, isMatchApproved } = reportData
+
+    // First poll — just set baseline, no toast
+    if (prevCanCall.current === null) {
+      prevCanCall.current  = canCallOwner
+      prevApproved.current = isMatchApproved
+      return
+    }
+
+    if (!prevCanCall.current && canCallOwner) {
+      showToast(
+        '📞 You can now call the owner!',
+        'The owner approved contact sharing. Tap "Call Owner" to connect.',
+        'success'
+      )
+    }
+
+    if (!prevApproved.current && isMatchApproved) {
+      showToast(
+        '✅ Match confirmed by owner!',
+        'The owner reviewed and confirmed this match. Contact sharing step next.',
+        'info'
+      )
+    }
+
+    prevCanCall.current  = canCallOwner
+    prevApproved.current = isMatchApproved
+  }, [reportData, showToast])
 
   const fetchReport = useCallback(async (isBackground = false) => {
     if (!isBackground) setRefreshing(true)

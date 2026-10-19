@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './store/AuthContext'
 import { NotificationProvider } from './store/NotificationContext'
+import { ToastProvider } from './store/ToastContext'
 
 // Layouts
 import PublicLayout from './components/layout/PublicLayout'
@@ -41,48 +42,50 @@ import ProtectedRoute from './features/auth/ProtectedRoute'
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/how-it-works" element={<HowItWorksPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-            </Route>
-
-            {/* Finder Routes (mobile friendly, accessible without account) */}
-            <Route path="/finder" element={<FinderPage />} />
-            <Route path="/finder/success" element={<SubmitSuccessPage />} />
-            <Route path="/finder/reports" element={<MyFoundReportsPage />} />
-            <Route path="/finder/report/:ref" element={<FinderReportDetailPage />} />
-
-            {/* Protected Admin Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin" element={<DashboardPage />} />
-                <Route path="/admin/items" element={<ItemsPage />} />
-                <Route path="/admin/items/register" element={<RegisterItemPage />} />
-                <Route path="/admin/items/:id" element={<ItemDetailPage />} />
-                <Route path="/admin/lost-reports" element={<LostReportsPage />} />
-                <Route path="/admin/lost-reports/new" element={<ReportLostPage />} />
-                <Route path="/admin/found-reports" element={<FoundItemReportsPage />} />
-                <Route path="/admin/matches" element={<FoundItemReportsPage />} />
-                <Route path="/admin/matches/:id" element={<MatchDetailPage />} />
-                <Route path="/admin/notifications" element={<NotificationsPage />} />
-                <Route path="/admin/profile" element={<ProfilePage />} />
-                <Route path="/admin/qr" element={<QRPage />} />
+      <ToastProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
               </Route>
-            </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </NotificationProvider>
-      </AuthProvider>
+              {/* Finder Routes (mobile friendly, accessible without account) */}
+              <Route path="/finder" element={<FinderPage />} />
+              <Route path="/finder/success" element={<SubmitSuccessPage />} />
+              <Route path="/finder/reports" element={<MyFoundReportsPage />} />
+              <Route path="/finder/report/:ref" element={<FinderReportDetailPage />} />
+
+              {/* Protected Admin Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<DashboardPage />} />
+                  <Route path="/admin/items" element={<ItemsPage />} />
+                  <Route path="/admin/items/register" element={<RegisterItemPage />} />
+                  <Route path="/admin/items/:id" element={<ItemDetailPage />} />
+                  <Route path="/admin/lost-reports" element={<LostReportsPage />} />
+                  <Route path="/admin/lost-reports/new" element={<ReportLostPage />} />
+                  <Route path="/admin/found-reports" element={<FoundItemReportsPage />} />
+                  <Route path="/admin/matches" element={<FoundItemReportsPage />} />
+                  <Route path="/admin/matches/:id" element={<MatchDetailPage />} />
+                  <Route path="/admin/notifications" element={<NotificationsPage />} />
+                  <Route path="/admin/profile" element={<ProfilePage />} />
+                  <Route path="/admin/qr" element={<QRPage />} />
+                </Route>
+              </Route>
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </NotificationProvider>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   )
 }
