@@ -126,8 +126,12 @@ exports.getFoundReportByToken = async (req, res, next) => {
       return next(new AppError('Found report not found or invalid access token.', 404));
     }
 
-    // Find any match for this found report
-    const match = await Match.findOne({ foundReportId: report._id }).populate('lostReportId');
+    // Find matches for this found report, prioritizing confirmed matches with phone consent
+    const matches = await Match.find({ foundReportId: report._id }).populate('lostReportId');
+    const match = matches.find(m => m.reviewStatus === MATCH_REVIEW_STATUS.CONFIRMED && m.phoneSharingConsent)
+      || matches.find(m => m.reviewStatus === MATCH_REVIEW_STATUS.CONFIRMED)
+      || matches.find(m => m.reviewStatus === MATCH_REVIEW_STATUS.PENDING)
+      || matches[0] || null;
 
     const hasMatch = !!match;
     const isMatchApproved = match?.reviewStatus === MATCH_REVIEW_STATUS.CONFIRMED;
@@ -189,8 +193,15 @@ exports.getOwnerContactForCall = async (req, res, next) => {
       return next(new AppError('This report is closed. Contact sharing is no longer accessible.', 403));
     }
 
-    // Find match
-    const match = await Match.findOne({ foundReportId: report._id });
+    // Find approved match with phone sharing consent
+    let match = await Match.findOne({
+      foundReportId: report._id,
+      reviewStatus: MATCH_REVIEW_STATUS.CONFIRMED,
+      phoneSharingConsent: true,
+    });
+    if (!match) {
+      match = await Match.findOne({ foundReportId: report._id });
+    }
     if (!match) {
       return next(new AppError('No match associated with this report.', 404));
     }
@@ -255,7 +266,20 @@ exports.getMyReportsBatch = async (req, res, next) => {
     const matches = await Match.find({ foundReportId: { $in: reportIds } });
     const matchMap = {};
     matches.forEach(m => {
-      matchMap[m.foundReportId.toString()] = m;
+      const id = m.foundReportId.toString();
+      const existing = matchMap[id];
+      if (!existing) {
+        matchMap[id] = m;
+      } else {
+        const getPriority = (x) => (
+          x.reviewStatus === MATCH_REVIEW_STATUS.CONFIRMED
+            ? (x.phoneSharingConsent ? 3 : 2)
+            : (x.reviewStatus === MATCH_REVIEW_STATUS.PENDING ? 1 : 0)
+        );
+        if (getPriority(m) > getPriority(existing)) {
+          matchMap[id] = m;
+        }
+      }
     });
 
     const enrichedReports = foundReports.map(r => {
