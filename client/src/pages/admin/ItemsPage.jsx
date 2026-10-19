@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Package, Search } from 'lucide-react'
+import { Plus, Package, Search, Trash2 } from 'lucide-react'
 import api from '../../services/api'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import EmptyState from '../../components/shared/EmptyState'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ErrorMessage from '../../components/shared/ErrorMessage'
+import ConfirmDialog from '../../components/shared/ConfirmDialog'
 
 const CATEGORIES = ['All', 'Mobile Phone', 'Laptop', 'Bag', 'Wallet', 'Keys', 'Water Bottle', 'Documents', 'Watch', 'Accessories', 'Other']
 
@@ -15,6 +16,8 @@ export default function ItemsPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
+  const [itemToDelete, setItemToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     try {
@@ -29,6 +32,20 @@ export default function ItemsPage() {
   }
 
   useEffect(() => { load() }, [search, category])
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return
+    setDeleting(true)
+    try {
+      await api.delete(`/items/${itemToDelete._id}`)
+      setItems(prev => prev.filter(i => i._id !== itemToDelete._id))
+      setItemToDelete(null)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete item.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div>
@@ -71,20 +88,49 @@ export default function ItemsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map(item => (
-            <Link key={item._id} to={`/admin/items/${item._id}`} className="card hover:shadow-md transition-all hover:border-brand-200">
-              <div className="flex items-start justify-between mb-3">
-                <div className="bg-gray-100 w-10 h-10 rounded-lg flex items-center justify-center">
-                  <Package className="h-5 w-5 text-gray-500" />
+            <div key={item._id} className="card hover:shadow-md transition-all hover:border-brand-200 flex flex-col justify-between">
+              <Link to={`/admin/items/${item._id}`} className="block">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="bg-gray-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Package className="h-5 w-5 text-gray-500" />
+                  </div>
+                  <StatusBadge status={item.status} />
                 </div>
-                <StatusBadge status={item.status} />
+                <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate">{item.name}</h3>
+                <p className="text-xs text-gray-500 mb-1">{item.category}</p>
+                {item.brand && <p className="text-xs text-gray-400">Brand: {item.brand}</p>}
+              </Link>
+              <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
+                <Link to={`/admin/items/${item._id}`} className="text-xs text-brand-700 hover:text-brand-900 font-medium">
+                  View Details &rarr;
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setItemToDelete(item)
+                  }}
+                  className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
+                  title="Delete Item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
-              <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate">{item.name}</h3>
-              <p className="text-xs text-gray-500 mb-2">{item.category}</p>
-              {item.brand && <p className="text-xs text-gray-400">Brand: {item.brand}</p>}
-            </Link>
+            </div>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!itemToDelete}
+        title="Delete this item?"
+        message={`Are you sure you want to permanently delete "${itemToDelete?.name}"? All associated match records and lost reports will also be deleted.`}
+        confirmLabel={deleting ? 'Deleting...' : 'Delete Permanently'}
+        onConfirm={handleDelete}
+        onCancel={() => setItemToDelete(null)}
+        variant="danger"
+      />
     </div>
   )
 }

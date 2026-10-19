@@ -66,7 +66,10 @@ router.patch(
   itemController.updateItemStatus
 );
 
-// DELETE /api/items/:id (soft-archive)
-router.delete('/:id', itemController.archiveItem);
+// PATCH /api/items/:id/archive (soft-archive)
+router.patch('/:id/archive', itemController.archiveItem);
+
+// DELETE /api/items/:id (permanent delete with cascade cleanup)
+router.delete('/:id', itemController.deleteItem);
 
 module.exports = router;

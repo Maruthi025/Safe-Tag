@@ -13,21 +13,21 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showArchive, setShowArchive] = useState(false)
-  const [archiving, setArchiving] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     api.get(`/items/${id}`).then(r => setItem(r.data.data.item)).catch(() => setError('Item not found.')).finally(() => setLoading(false))
   }, [id])
 
-  const handleArchive = async () => {
-    setArchiving(true)
+  const handleDelete = async () => {
+    setDeleting(true)
     try {
       await api.delete(`/items/${id}`)
       navigate('/admin/items')
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to archive item.')
-    } finally { setArchiving(false); setShowArchive(false) }
+      setError(err.response?.data?.message || 'Failed to delete item.')
+    } finally { setDeleting(false); setShowDelete(false) }
   }
 
   if (loading) return <div className="py-20"><LoadingSpinner size="lg" /></div>
@@ -59,27 +59,31 @@ export default function ItemDetailPage() {
           {item.serialNumber && <div><span className="text-xs text-gray-400 uppercase tracking-wide font-medium block">Serial Number</span><p className="text-gray-800 mt-1">{item.serialNumber}</p></div>}
         </div>
 
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
-          {item.status === 'registered' && (
-            <Link to={`/admin/lost-reports/new?itemId=${item._id}`} className="btn-danger text-sm">
-              <AlertTriangle className="h-4 w-4" /> Report Lost
-            </Link>
-          )}
-          {item.status !== 'archived' && (
-            <button onClick={() => setShowArchive(true)} className="btn-secondary text-red-600 border-red-200 hover:bg-red-50 text-sm">
-              <Trash2 className="h-4 w-4" /> Archive
-            </button>
-          )}
+        <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100 items-center justify-between">
+          <div className="flex gap-2">
+            {item.status === 'registered' && (
+              <Link to={`/admin/lost-reports/new?itemId=${item._id}`} className="btn-danger text-sm">
+                <AlertTriangle className="h-4 w-4" /> Report Lost
+              </Link>
+            )}
+          </div>
+          <button
+            onClick={() => setShowDelete(true)}
+            className="btn-secondary text-red-600 border-red-200 hover:bg-red-50 text-sm inline-flex items-center gap-1.5"
+          >
+            <Trash2 className="h-4 w-4" /> Delete Item
+          </button>
         </div>
       </div>
 
       <ConfirmDialog
-        isOpen={showArchive}
-        title="Archive this item?"
-        message="This item will be removed from your active list."
-        confirmLabel={archiving ? 'Archiving...' : 'Archive'}
-        onConfirm={handleArchive}
-        onCancel={() => setShowArchive(false)}
+        isOpen={showDelete}
+        title="Delete this item permanently?"
+        message={`Are you sure you want to permanently delete "${item.name}"? This will remove the item, its lost reports, and any associated match history.`}
+        confirmLabel={deleting ? 'Deleting...' : 'Delete Permanently'}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDelete(false)}
+        variant="danger"
       />
     </div>
   )

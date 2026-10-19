@@ -1,5 +1,7 @@
 const Item = require('../models/Item');
 const LostReport = require('../models/LostReport');
+const Match = require('../models/Match');
+const Notification = require('../models/Notification');
 const AppError = require('../utils/AppError');
 const { ITEM_STATUS } = require('../config/constants');
 const { runMatchingForLostReport } = require('../services/matchingService');
@@ -104,6 +106,36 @@ exports.archiveItem = async (req, res, next) => {
     item.status = ITEM_STATUS.ARCHIVED;
     await item.save();
     res.status(200).json({ status: 'success', data: { item } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteItem = async (req, res, next) => {
+  try {
+    const item = await Item.findOne({ _id: req.params.id, ownerId: req.user._id });
+    if (!item) return next(new AppError('Item not found.', 404));
+
+    // Delete associated Matches
+    const matches = await Match.find({ itemId: item._id });
+    const matchIds = matches.map(m => m._id);
+    await Match.deleteMany({ itemId: item._id });
+
+    // Delete notifications associated with these matches
+    if (matchIds.length > 0) {
+      await Notification.deleteMany({ relatedMatchId: { $in: matchIds } });
+    }
+
+    // Delete associated LostReports
+    await LostReport.deleteMany({ itemId: item._id });
+
+    // Delete the Item itself
+    await Item.deleteOne({ _id: item._id });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Item and associated records permanently deleted.',
+    });
   } catch (error) {
     next(error);
   }
