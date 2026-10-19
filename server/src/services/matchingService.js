@@ -192,9 +192,9 @@ const computeMatchScore = (foundReport, lostReport, item) => {
  */
 const runMatchingForFoundReport = async (foundReport) => {
   try {
-    // Include lost reports that are active OR already matched to other candidate reports
+    // Only include genuinely active lost reports
     const activeLostReports = await LostReport.find({
-      status: { $in: [LOST_REPORT_STATUS.ACTIVE, LOST_REPORT_STATUS.MATCHED] },
+      status: LOST_REPORT_STATUS.ACTIVE,
     }).populate('itemId');
 
     // Also include any items marked 'lost' by the owner that don't have an active LostReport yet
@@ -222,6 +222,11 @@ const runMatchingForFoundReport = async (foundReport) => {
     const matchPromises = activeLostReports.map(async (lostReport) => {
       const item = lostReport.itemId;
       if (!item) return;
+
+      // Never match against items that are already in recovery, recovered, or archived
+      if ([ITEM_STATUS.RECOVERY_IN_PROGRESS, ITEM_STATUS.RECOVERED, ITEM_STATUS.ARCHIVED].includes(item.status)) {
+        return;
+      }
 
       const { score, reasons, category } = computeMatchScore(foundReport, lostReport, item);
 
@@ -274,7 +279,7 @@ const runMatchingForFoundReport = async (foundReport) => {
 const runMatchingForLostReport = async (lostReport, item) => {
   try {
     const pendingFoundReports = await FoundReport.find({
-      status: { $nin: ['recovered', 'closed'] },
+      status: { $nin: ['recovered', 'closed', 'owner_reviewing'] },
     });
 
     const matchPromises = pendingFoundReports.map(async (foundReport) => {

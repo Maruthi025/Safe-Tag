@@ -95,6 +95,19 @@ exports.reviewMatch = async (req, res, next) => {
         message: `You confirmed a match for your ${item.name}. Recovery is now in progress. You can now optionally authorize contact sharing.`,
         relatedMatchId: match._id,
       });
+
+      // Auto-reject any OTHER pending candidate matches for this item
+      await Match.updateMany(
+        {
+          _id: { $ne: match._id },
+          itemId: item._id,
+          reviewStatus: MATCH_REVIEW_STATUS.PENDING,
+        },
+        {
+          reviewStatus: MATCH_REVIEW_STATUS.REJECTED,
+          phoneSharingConsent: false,
+        }
+      );
     } else {
       match.reviewStatus = MATCH_REVIEW_STATUS.REJECTED;
       match.phoneSharingConsent = false;
